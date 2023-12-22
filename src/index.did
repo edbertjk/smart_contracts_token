@@ -1,0 +1,11 @@
+service: () -> {
+    createPrize: (text, nat64, nat64) -> (variant {Ok:record {createdAt:nat64; idPrize:text; updatedAt:nat64; pointPrize:nat64; namePrize:text; amountPrize:nat64}; Err:text});
+    createToken: (text, nat64) -> (variant {Ok:record {nameToken:text; createdAt:nat64; uniqueCode:text; updatedAt:nat64; pointToken:nat64}; Err:text});
+    createUser: (text) -> (variant {Ok:record {pointUser:nat64; createdAt:nat64; nameUser:text; updatedAt:nat64; idUser:text}; Err:text});
+    exchangePrize: (text, text) -> (variant {Ok:record {createdAt:nat64; idPrize:text; updatedAt:nat64; pointPrize:nat64; namePrize:text; amountPrize:nat64}; Err:text});
+    getAllPrize: () -> (vec record {createdAt:nat64; idPrize:text; updatedAt:nat64; pointPrize:nat64; namePrize:text; amountPrize:nat64}) query;
+    getAllToken: () -> (vec record {nameToken:text; createdAt:nat64; uniqueCode:text; updatedAt:nat64; pointToken:nat64}) query;
+    getAllUser: () -> (vec record {pointUser:nat64; createdAt:nat64; nameUser:text; updatedAt:nat64; idUser:text}) query;
+    getOnceUser: (text) -> (record {pointUser:nat64; createdAt:nat64; nameUser:text; updatedAt:nat64; idUser:text}) query;
+    redeemToken: (text, text) -> (variant {Ok:record {pointUser:nat64; createdAt:nat64; nameUser:text; updatedAt:nat64; idUser:text}; Err:text});
+}
