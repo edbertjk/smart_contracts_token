@@ -1,11 +1,41 @@
-service: () -> {
-    createPrize: (text, nat64, nat64) -> (variant {Ok:record {createdAt:nat64; idPrize:text; updatedAt:nat64; pointPrize:nat64; namePrize:text; amountPrize:nat64}; Err:text});
-    createToken: (text, nat64) -> (variant {Ok:record {nameToken:text; createdAt:nat64; uniqueCode:text; updatedAt:nat64; pointToken:nat64}; Err:text});
-    createUser: (text) -> (variant {Ok:record {pointUser:nat64; createdAt:nat64; nameUser:text; updatedAt:nat64; idUser:text}; Err:text});
-    exchangePrize: (text, text) -> (variant {Ok:record {createdAt:nat64; idPrize:text; updatedAt:nat64; pointPrize:nat64; namePrize:text; amountPrize:nat64}; Err:text});
-    getAllPrize: () -> (vec record {createdAt:nat64; idPrize:text; updatedAt:nat64; pointPrize:nat64; namePrize:text; amountPrize:nat64}) query;
-    getAllToken: () -> (vec record {nameToken:text; createdAt:nat64; uniqueCode:text; updatedAt:nat64; pointToken:nat64}) query;
-    getAllUser: () -> (vec record {pointUser:nat64; createdAt:nat64; nameUser:text; updatedAt:nat64; idUser:text}) query;
-    getOnceUser: (text) -> (record {pointUser:nat64; createdAt:nat64; nameUser:text; updatedAt:nat64; idUser:text}) query;
-    redeemToken: (text, text) -> (variant {Ok:record {pointUser:nat64; createdAt:nat64; nameUser:text; updatedAt:nat64; idUser:text}; Err:text});
+type Prize = record {
+  id : text;
+  name : text;
+  createdAt : nat64;
+  updatedAt : opt nat64;
+  point : nat64;
+  amount : nat64;
+};
+type PrizePayload = record { name : text; point : nat64; amount : nat64 };
+type Token = record {
+  name : text;
+  createdAt : nat64;
+  uniqueCode : text;
+  updatedAt : opt nat64;
+  point : nat64;
+};
+type User = record {
+  id : text;
+  username : text;
+  password : text;
+  createdAt : nat64;
+  updatedAt : opt nat64;
+  points : nat64;
+};
+type _AzleResult = variant { Ok : Prize; Err : text };
+type _AzleResult_1 = variant { Ok : Token; Err : text };
+type _AzleResult_2 = variant { Ok : User; Err : text };
+type _AzleResult_3 = variant { Ok : vec Prize; Err : text };
+type _AzleResult_4 = variant { Ok : vec Token; Err : text };
+type _AzleResult_5 = variant { Ok : vec User; Err : text };
+service : () -> {
+  createPrize : (PrizePayload) -> (_AzleResult);
+  createToken : (text, nat64) -> (_AzleResult_1);
+  createUser : (text, text) -> (_AzleResult_2);
+  exchangePrize : (text, text) -> (_AzleResult);
+  getAllPrize : () -> (_AzleResult_3) query;
+  getAllToken : () -> (_AzleResult_4) query;
+  getAllUser : () -> (_AzleResult_5) query;
+  getOnceUser : (text) -> (_AzleResult_2) query;
+  redeemToken : (text, text) -> (_AzleResult_2);
 }

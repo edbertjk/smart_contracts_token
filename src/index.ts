@@ -1,177 +1,284 @@
-import { 
-    Canister, 
-    query, 
-    text, 
-    Record, 
-    update, 
-    nat64, 
-    ic,
-    StableBTreeMap,
-    Result,
-  Vec } from 'azle';
-import { v4 as uuidv4 } from "uuid";
-// This is a global variable that is stored on the heap
-let message = '';
-const user = Record({
-    idUser:text,
-    nameUser:text,
-    pointUser:nat64,
-    createdAt:nat64,
-    updatedAt: nat64,
-});
+import {
+  $query,
+  $update,
+  Record,
+  nat64,
+  match,
+  ic,
+  StableBTreeMap,
+  Result,
+  Vec,
+  Opt,
+} from 'azle';
+import { v4 as uuidv4 } from 'uuid';
 
-const token = Record({
-    nameToken: text,
-    pointToken: nat64,
-    uniqueCode: text,
-    createdAt: nat64,
-    updatedAt: nat64
-});
+// Define the User record type
+type User = Record<{
+  id: string;
+  username: string;
+  password: string;
+  points: nat64;
+  createdAt: nat64;
+  updatedAt: Opt<nat64>;
+}>;
 
-const prize=Record({
-    idPrize:text,
-    namePrize:text,
-    pointPrize:nat64,
-    amountPrize:nat64,
-    createdAt: nat64,
-    updatedAt: nat64
-});
+// Define the Token record type
+type Token = Record<{
+  name: string;
+  point: nat64;
+  uniqueCode: string;
+  createdAt: nat64;
+  updatedAt: Opt<nat64>;
+}>;
 
+// Define the Prize record type
+type Prize = Record<{
+  id: string;
+  name: string;
+  point: nat64;
+  amount: nat64;
+  createdAt: nat64;
+  updatedAt: Opt<nat64>;
+}>;
 
+// Define the Payload type for creating a Prize
+type PrizePayload = Record<{
+  name: string;
+  point: nat64;
+  amount: nat64;
+}>;
 
-type User=typeof user | any;
+// Create StableBTreeMaps to store user, token, and prize data
+const userDatabase = new StableBTreeMap<string, User>(0, 44, 1024);
+const tokenDatabase = new StableBTreeMap<string, Token>(1, 44, 1024);
+const prizeDatabase = new StableBTreeMap<string, Prize>(2, 44, 1024);
 
-let userDatabase=StableBTreeMap<text,User>(3)
+$update
+export function createUser(name: string, password: string): Result<User, string> {
+  // Payload Validation: Ensure that the name and password are present in the payload
+  if (!name || !password) {
+    return Result.Err<User, string>('Name and password must be added');
+  }
 
-type Prize = typeof prize | any;
+  // Create a new user record
+  const uniqueUserId = uuidv4();
+  const newUser: User = {
+    id: uniqueUserId,
+    username: name,
+    password: password,
+    points: 0n,
+    createdAt: ic.time(),
+    updatedAt: Opt.None,
+  };
 
-let prizeDatabase=StableBTreeMap<text,Prize>(1)
+  try {
+    // Insert the new user into the database
+    userDatabase.insert(newUser.id, newUser);
+    return Result.Ok<User, string>(newUser);
+  } catch (error) {
+    return Result.Err<User, string>('Failed to create user');
+  }
+}
 
-type Token = typeof token | any;
+$update
+export function createToken(nameInputToken: string, pointInputToken: nat64): Result<Token, string> {
+  // Payload Validation: Ensure that the name and point are present in the payload
+  if (!nameInputToken || !pointInputToken) {
+    return Result.Err<Token, string>('Name and point must be added');
+  }
 
-let tokenDatabase=StableBTreeMap<text,Token>(2)
+  // Create a new token record
+  const uuidCode = uuidv4();
+  const newToken: Token = {
+    name: nameInputToken,
+    point: pointInputToken,
+    uniqueCode: uuidCode,
+    createdAt: ic.time(),
+    updatedAt: Opt.None,
+  };
 
-export default Canister({
-    // Query calls complete quickly because they do not go through consensus
-    createUser: update([text], Result(user, text), (name) => {
-        try{
-        const uniqueUserId = uuidv4();
-        if(!name){
-            throw new Error("Name must be added");
-        }
-      
-      const newUser: User = {
-        idUser: uniqueUserId,
-        nameUser: name,
-        pointUser: 0n,
-        createdAt: ic.time(),
-        updatedAt: 0n,
-      };
+ 
+  try {
+    // Insert the new token into the database
+    tokenDatabase.insert(uuidCode, newToken);
+    return Result.Ok<Token, string>(newToken);
+  } catch (error) {
+    return Result.Err<Token, string>('Failed to create token');
+  }
+}
+
+$update
+export function createPrize(payload: PrizePayload): Result<Prize, string> {
+  // Payload Validation: Ensure that all data is present in the payload
+  if (!payload.name || !payload.point || !payload.amount) {
+    return Result.Err<Prize, string>('All data must be added');
+  }
+
+  // Create a new prize record
+  const uniqueIdPrize = uuidv4();
+  const newPrize: Prize = {
+    id: uniqueIdPrize,
+    name: payload.name,
+    point: payload.point,
+    amount: payload.amount,
+    createdAt: ic.time(),
+    updatedAt: Opt.None,
+  };
+
   
-      userDatabase.insert(uniqueUserId, newUser);
-      return Result.Ok(newUser);
-    }catch(err){
-        return Result.Err("Error Creating Account [" + err +"]");
-    }
-    }),
-    
-    createToken: update([text, nat64], Result(token, text), (nameInputToken, pointInputToken) => {
-        try{
-        const uuidCode = uuidv4();
-        if(!nameInputToken || !pointInputToken){
-            throw new Error("Name/Point must be added");
-        }
-      
-      const newToken: Token = {
-        nameToken: nameInputToken,
-        pointToken: pointInputToken,
-        uniqueCode: uuidCode,
-        createdAt: ic.time(),
-        updatedAt: 0n,
-      };
-  
-      tokenDatabase.insert(uuidCode, newToken);
-      return Result.Ok(newToken);
-    }catch(err){
-        return Result.Err("Error Creating Token [" + err +"]");
-    }
-    }),
+  try {
+    // Insert the new prize into the database
+    prizeDatabase.insert(uniqueIdPrize, newPrize);
+    return Result.Ok<Prize, string>(newPrize);
+  } catch (error) {
+    return Result.Err<Prize, string>('Failed to create prize');
+  }
+}
 
-    createPrize: update([text,nat64,nat64], Result(prize, text), (name,poin,amount) => {
-        try{
-        const uniqueIdPrize = uuidv4();
-        if(!name || !poin || !amount){
-            throw new Error("All data must be added");
-        }
-      
-      const newPrize: Prize = {
-        idPrize: uniqueIdPrize,
-        namePrize:name,
-        pointPrize:poin,
-        amountPrize:amount,
-        createdAt: ic.time(),
-        updatedAt: 0n
-      };
-  
-      prizeDatabase.insert(uniqueIdPrize, newPrize);
-      return Result.Ok(newPrize);
-    }catch(err){
-        return Result.Err("Error Creating Account [" + err +"]");
+$query
+export function getOnceUser(id: string): Result<User, string> {
+  try {
+    // Parameter Validation: Validate the id parameter to ensure it's a valid string
+    if (typeof id !== 'string') {
+      return Result.Err<User, string>('Invalid ID parameter.');
     }
-    }),
-    
-    getOnceUser: query([text], user, (id) => {
-        const userData = userDatabase.get(id);
-        if ("None" in userData) {
-            return `The user with id=${id} not found`;
-        }
-        return userData.Some;
-    }),
-    getAllUser: query([], Vec(user), () => {
-      return userDatabase.values();
-    }),
-  getAllPrize: query([], Vec(prize), () => {
-    return prizeDatabase.values();
-  }),
-  getAllToken: query([], Vec(token), () => {
-    return tokenDatabase.values();
-  }),
+    // Retrieve user data by ID
+    const userData = userDatabase.get(id);
 
-redeemToken:update([text,text], Result(user, text), (idUser,idToken) => {
-    try{
-      let dataToken:Token=tokenDatabase.get(idToken).Some
-      let dataUser:User=userDatabase.get(idUser).Some
-      if(!idUser || !idToken){
-        throw new Error("ID User/ID Token Must Submited");
+    return match(userData, {
+      Some: (user) => Result.Ok<User, string>(user),
+      None: () => Result.Err<User, string>(`The user with id=${id} not found`),
+    });
+  } catch (error) {
+    return Result.Err<User, string>(`Error retrieving user: ${error}`);
+  }
+}
+
+$query
+export function getAllUser(): Result<Vec<User>, string> {
+  try {
+    // Retrieve all user data
+    return Result.Ok(userDatabase.values());
+  } catch (error) {
+    return Result.Err<Vec<User>, string>(`Error retrieving all users: ${error}`);
+  }
+}
+
+$query
+export function getAllPrize(): Result<Vec<Prize>, string> {
+  try {
+    // Retrieve all prize data
+    return Result.Ok(prizeDatabase.values());
+  } catch (error) {
+    return Result.Err<Vec<Prize>, string>(`Error retrieving all prizes: ${error}`);
+  }
+}
+
+$query
+export function getAllToken(): Result<Vec<Token>, string> {
+  try {
+    // Retrieve all token data
+    return Result.Ok(tokenDatabase.values());
+  } catch (error) {
+    return Result.Err<Vec<Token>, string>(`Error retrieving all tokens: ${error}`);
+  }
+}
+
+$update
+export function redeemToken(idUser: string, idToken: string): Result<User, string> {
+  try {
+    // Parameter Validation: Validate the id parameter to ensure it's a valid string
+    if (typeof idUser !== 'string') {
+      return Result.Err<User, string>('Invalid ID parameter.');
+    }
+    // Parameter Validation: Validate the id parameter to ensure it's a valid string
+    if (typeof idToken !== 'string') {
+      return Result.Err<User, string>('Invalid ID parameter.');
+    }
+    // Match user data by ID
+    return match(
+      userDatabase.get(idUser),
+      {
+        Some: (dataUser) => match(
+          tokenDatabase.get(idToken),
+          {
+            Some: (dataToken) => {
+              // Update user points with token points
+              dataUser.points = dataUser.points + dataToken.point;
+
+              // Update user data in the database
+              userDatabase.insert(idUser, dataUser);
+
+              return Result.Ok<User, string>(dataUser);
+            },
+            None: () => Result.Err<User, string>('Token not found'),
+          }
+        ),
+        None: () => Result.Err<User, string>('User not found'),
       }
+    );
+  } catch (error) {
+    return Result.Err<User, string>(`Error redeeming token: ${error}`);
+  }
+}
 
-      dataUser["pointUser"]=dataUser["pointUser"]+dataToken["pointToken"]
-      
-      userDatabase.insert(idUser,dataUser)
-      return Result.Ok(dataUser);
-    }catch(err){
-        return Result.Err("Error Redeem [" + err +"]");
+$update
+export function exchangePrize(idUser: string, idPrize: string): Result<Prize, string> {
+  try {
+    // Parameter Validation: Validate the id parameter to ensure it's a valid string
+    if (typeof idUser !== 'string') {
+      return Result.Err<Prize, string>('Invalid ID parameter.');
     }
-    
-  }),
-  exchangePrize:update([text,text], Result(prize, text), (idUser,idPrize) => {
-    try{
-      let dataPrize:Prize=prizeDatabase.get(idPrize).Some
-      let dataUser:User=userDatabase.get(idUser).Some
-      if(dataPrize["pointPrize"]>dataUser["pointUser"] || dataPrize["amountPrize"] == 0){
-        throw new Error("Error Amount/Point");
+    // Parameter Validation: Validate the id parameter to ensure it's a valid string
+    if (typeof idPrize !== 'string') {
+      return Result.Err<Prize, string>('Invalid ID parameter.');
+    }
+    // Match user data by ID
+    return match(
+      userDatabase.get(idUser),
+      {
+        Some: (dataUser) => {
+          // Match prize data by ID
+          const prizeData = prizeDatabase.get(idPrize);
+
+          return match(
+            prizeData,
+            {
+              Some: (dataPrize) => {
+                if (dataPrize.point > dataUser.points || dataPrize.amount === 0n) {
+                  return Result.Err<Prize, string>('Error Amount/Point');
+                }
+
+                // Update user points and prize amount
+                dataUser.points = dataUser.points - dataPrize.point;
+                dataPrize.amount = dataPrize.amount - 1n;
+
+                // Update user and prize data in the database
+                userDatabase.insert(idUser, dataUser);
+                prizeDatabase.insert(idPrize, dataPrize);
+
+                return Result.Ok<Prize, string>(dataPrize);
+              },
+              None: () => Result.Err<Prize, string>('Prize not found'),
+            }
+          );
+        },
+        None: () => Result.Err<Prize, string>('User not found'),
       }
+    );
+  } catch (error) {
+    return Result.Err<Prize, string>(`Error exchanging prize: ${error}`);
+  }
+}
 
-      dataUser["pointUser"]=dataUser["pointUser"]-dataPrize["pointPrize"]
-      dataPrize["amountPrize"]=dataPrize["amountPrize"]-1n
-      
-      userDatabase.insert(idUser,dataUser)
-      prizeDatabase.insert(idPrize,dataPrize)
-      return Result.Ok(dataPrize);
-    }catch(err){
-        return Result.Err("Error Exchange [" + err +"]");
+// Cryptographic utility for generating random values
+globalThis.crypto = {
+  // @ts-ignore
+  getRandomValues: () => {
+    let array = new Uint8Array(32);
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
     }
-    
-  })
-});
-
+    return array;
+  },
+};
